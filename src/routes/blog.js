@@ -9,7 +9,12 @@ router.post('/create-blog', [
             body('body').isLength({min: 50, max: 500}).withMessage('Incorrect body input')],         
             blogController.createBlog);
 
-// Read Blog -> GET
-router.get('/blog', blogController.getAllBlog)
+// Read Blog -> [GET] : /v1/blog/get
+router.get('/posts', blogController.getBlog);
+router.get('/post/:postId', blogController.getBlogPostById);
+router.put('/post/:postId', [
+            body('title').isLength({min: 5, max: 20}).withMessage('Incorrect title input'),
+            body('body').isLength({min: 50, max: 500}).withMessage('Incorrect body input')],
+            blogController.updateBlogPost);
 
 module.exports = router;

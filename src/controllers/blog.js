@@ -1,43 +1,119 @@
 const { validationResult } = require("express-validator");
+const blogPost = require('../models/blog');
 
 exports.createBlog = (req, res, next) => {
-    const {title, image, body} = req.body;
     const error = validationResult(req);
+
+    // Validator
     if (!error.isEmpty()) {
         const err = new Error('Incorrect value input');
         err.errorStatus = 400;
         err.data = error.array();
         throw err;
     }
-    const result = {
-        message: "Create Blog Post Success",
-        data: {
-            post_id: 1,
-            title: title,
-            image: image,
-            body: body,
-            create_at: "23/04/2023",
-            author: {
-                user_id: 1,
-                name: "aldi"
-            }
-        }
+
+    if (!req.file) {
+        const err = new Error('Image must be uploaded');
+        err.errorStatus = 422;
+        throw err;
     }
-    res.status(201).json(result);
-    next();
+
+    const {title, body} = req.body;
+    const image = req.file.path;
+
+    const posting = new blogPost({
+        title: title,
+        image: image,
+        body: body,
+        author: {uid: 1, name: 'Aldi Lukman'}
+    });
+
+    posting.save()
+    .then(result => {
+        const response = {
+            message: "Create Blog Post Success",
+            data: result
+        }
+        res.status(201).json(response);
+    })
+    .catch(err => {
+        console.log('error : ', err)
+    });
 }
 
-exports.getAllBlog = (req, res, next) => {
-    res.json(
-        {
-            message: 'Get All Blog Success',
-            data: [
-                {
-                    id: 1,
-                    name: 'Aldi Lukman',
-                    tag: 'aldilukmn'
-                }
-            ]
+exports.getBlog = (req, res, next) => {
+    blogPost.find()
+    .then(result => {
+        res.status(200).json({
+            message: 'Blog post successfully retrieved',
+            data: result
+        })
+    })
+    .catch(err => {
+        next(err);
+    })
+}
+
+exports.getBlogPostById = (req, res, next) => {
+    const postId = req.params.postId;
+    blogPost.findById(postId)
+    .then(result => {
+        if(!result) {
+            const error = new Error('Blog post not found');
+            error.errorStatus = 404;
+            throw error;
         }
-    )
+        res.status(200).json({
+            message: 'Blog post found',
+            data: result,
+        })
+    })
+    .catch(err => {
+        next(err);
+    })
+}
+
+exports.updateBlogPost = (req, res, next) => {
+    const error = validationResult(req);
+
+    // Validator
+    if (!error.isEmpty()) {
+        const err = new Error('Incorrect value input');
+        err.errorStatus = 400;
+        err.data = error.array();
+        throw err;
+    }
+
+    if (!req.file) {
+        const err = new Error('Image must be uploaded');
+        err.errorStatus = 422;
+        throw err;
+    }
+
+    const {title, body} = req.body;
+    const image = req.file.path;
+    const postId = req.params.postId;
+
+    blogPost.findById(postId)
+    .then(post => {
+        if (!post) {
+            const error = new Error('Blog post not found');
+            error.errorStatus = 404;
+            throw error;
+        }
+        post.title = title;
+        post.image = image;
+        post.body = body;
+
+        return post.save();
+    })
+    .then(result => {
+        res.status(200).json({
+            message: "Update successful",
+            data: result,
+        })
+    })
+    .catch(err => {
+        next(err);
+    })
 }
