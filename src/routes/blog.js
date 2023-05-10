@@ -16,5 +16,6 @@ router.put('/post/:postId', [
             body('title').isLength({min: 5, max: 20}).withMessage('Incorrect title input'),
             body('body').isLength({min: 50, max: 500}).withMessage('Incorrect body input')],
             blogController.updateBlogPost);
+router.delete('/post/:postId', blogController.deleteBlogPostbyId)
 
 module.exports = router;

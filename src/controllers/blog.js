@@ -1,5 +1,7 @@
 const { validationResult } = require("express-validator");
 const blogPost = require('../models/blog');
+const path = require('path');
+const fs = require('fs');
 
 exports.createBlog = (req, res, next) => {
     const error = validationResult(req);
@@ -42,11 +44,25 @@ exports.createBlog = (req, res, next) => {
 }
 
 exports.getBlog = (req, res, next) => {
+    const currentPage = req.query.page || 1;
+    const perPage = req.query.perPage || 5;
+    let totalItem;
+
     blogPost.find()
+    .countDocuments()
+    .then(count => {
+        totalItem = count;
+        return blogPost.find()
+        .skip((currentPage - 1) * perPage)
+        .limit(perPage);
+    })
     .then(result => {
         res.status(200).json({
             message: 'Blog post successfully retrieved',
-            data: result
+            data: result,
+            total_data: totalItem,
+            per_page: parseInt(perPage),
+            current_page: parseInt(currentPage),
         })
     })
     .catch(err => {
@@ -117,3 +133,38 @@ exports.updateBlogPost = (req, res, next) => {
         next(err);
     })
 }
+
+exports.deleteBlogPostbyId = (req, res, next) => {
+    const postId = req.params.postId;
+    blogPost.findById(postId)
+    .then(post => {
+        if (!post) {
+            const error = new Error('Blog post not found');
+            error.errorStatus = 404;
+            throw error;
+        }
+
+        removeImage(post.image);
+        return blogPost.findByIdAndRemove(postId);
+    })
+    .then(result => {
+        res.status(200).json({
+            message: "Blog post successfully deleted",
+            data: result
+        })
+    })
+    .catch(err => {
+        next(err);
+    })
+}
+
+const removeImage = (filePath) => {
+    filePath = path.join(__dirname, '../../', filePath);
+    fs.unlink(filePath, err => {
+        if (err) {
+            console.log('Error removing image :', err)
+        } else {
+            console.log('Image removed successfully');
+        }
+    });
+};
